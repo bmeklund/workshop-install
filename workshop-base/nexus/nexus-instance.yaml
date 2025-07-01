@@ -1,8 +1,3 @@
-apiVersion: project.openshift.io/v1
-kind: Project
-metadata:
-  name: nexus
----
 apiVersion: v1
 kind: PersistentVolumeClaim
 metadata:
@@ -33,13 +28,13 @@ spec:
       app: nexus
   strategy:
     type: Recreate
+    terminationGracePeriodSeconds: 120
   template:
     metadata:
       labels:
         app: nexus
     spec:
       serviceAccountName: nexus-sa
-      automountServiceAccountToken: false
       containers:
         - name: nexus
           image: docker.io/sonatype/nexus3:3.24.0
@@ -79,10 +74,10 @@ spec:
           volumeMounts:
             - name: nexus-data
               mountPath: /nexus-data
-    volumes:
-      - name: nexus-data
-        persistentVolumeClaim:
-          claimName: nexus-pvc
+      volumes:
+        - name: nexus-data
+          persistentVolumeClaim:
+            claimName: nexus-pvc
 ---
 apiVersion: v1
 kind: Service
