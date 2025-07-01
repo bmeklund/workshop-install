@@ -290,6 +290,9 @@ spec:
 
               echo "All Maven and NPM repositories created successfully!"
               echo "Done configuring Nexus."
+          volumeMounts:
+            - name: nexus-data
+              mountPath: /nexus-data
       volumes:
         - name: nexus-data
           persistentVolumeClaim:
