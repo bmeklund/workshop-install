@@ -74,8 +74,7 @@ spec:
           volumeMounts:
             - name: nexus-data
               mountPath: /nexus-data
-      initContainers:
-        - name: nexus-init
+        - name: nexus-configurator
           image: curlimages/curl:latest
           command:
             - /bin/sh
@@ -87,7 +86,7 @@ spec:
               done
             
               echo "Waiting for Nexus to be ready..."
-              until curl -s -o /dev/null -w "%{http_code}" http://nexus:8081/service/rest/v1/status | grep -q "200"; do
+              until curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/service/rest/v1/status | grep -q "200"; do
               echo "Nexus is not ready yet..."
               sleep 10
               done
@@ -103,7 +102,7 @@ spec:
                 "oldPassword": "'"$ADMIN_PASS"'",
                 "newPassword": "'"$NEW_PASS"'"
                 }' \
-                http://nexus:8081/service/rest/v1/security/users/admin/change-password
+                http://localhost:8081/service/rest/v1/security/users/admin/change-password
 
               echo "Enabling anonymous access..."
               curl -u admin:$NEW_PASS \
@@ -113,19 +112,19 @@ spec:
                 "userId": "anonymous",
                 "realmName": "NexusAuthorizingRealm"
                 }' \
-                http://nexus:8081/service/rest/v1/security/anonymous
+                http://localhost:8081/service/rest/v1/security/anonymous
 
               echo "Setting up repositories using REST API..."
 
-              MAVEN_BASE="http://nexus:8081/service/rest/v1/repositories/maven"
-              NPM_BASE="http://nexus:8081/service/rest/v1/repositories/npm"
+              MAVEN_BASE="http://localhost:8081/service/rest/v1/repositories/maven"
+              NPM_BASE="http://localhost:8081/service/rest/v1/repositories/npm"
 
               ########################################
               # Maven Repositories
               ########################################
 
               # Maven Central Proxy
-              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
+              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "maven-central",
@@ -152,7 +151,7 @@ spec:
                 }'
 
               # RedHat GA Proxy
-              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
+              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "redhat-ga",
@@ -179,7 +178,7 @@ spec:
                 }'
 
               # JBoss Proxy
-              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
+              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "jboss",
@@ -206,7 +205,7 @@ spec:
                 }'
 
               # Maven Hosted Releases
-              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/hosted \
+              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/hosted \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "releases",
@@ -226,7 +225,7 @@ spec:
                 }'
 
               # Maven Group: maven-all-public
-              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/group \
+              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/group \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "maven-all-public",
@@ -253,7 +252,7 @@ spec:
               ########################################
 
               # NPM Proxy: npm
-              curl -u admin:$ADMIN_PASS -X POST $NPM_BASE/proxy \
+              curl -u admin:$NEW_PASS -X POST $NPM_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "npm",
@@ -276,7 +275,7 @@ spec:
                 }'
 
               # NPM Group: npm-all
-              curl -u admin:$ADMIN_PASS -X POST $NPM_BASE/group \
+              curl -u admin:$NEW_PASS -X POST $NPM_BASE/group \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "npm-all",
