@@ -92,19 +92,9 @@ spec:
 
               echo "Nexus is up. Reading default admin password..."
               ADMIN_PASS=$(cat /nexus-data/admin.password)
-              NEW_PASS="redhat" 
-
-              echo "Setting new admin password..."
-              curl -u admin:$ADMIN_PASS \
-                -X POST -H "Content-Type: application/json" \
-                -d '{
-                "oldPassword": "'"$ADMIN_PASS"'",
-                "newPassword": "'"$NEW_PASS"'"
-                }' \
-                http://localhost:8081/service/rest/v1/security/users/admin/change-password
 
               echo "Enabling anonymous access..."
-              curl -u admin:$NEW_PASS \
+              curl -u admin:$ADMIN_PASS \
                 -X PUT -H "Content-Type: application/json" \
                 -d '{
                 "enabled": true,
@@ -123,7 +113,7 @@ spec:
               ########################################
 
               # Maven Central Proxy
-              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/proxy \
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "maven-central",
@@ -150,7 +140,7 @@ spec:
                 }'
 
               # RedHat GA Proxy
-              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/proxy \
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "redhat-ga",
@@ -177,7 +167,7 @@ spec:
                 }'
 
               # JBoss Proxy
-              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/proxy \
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "jboss",
@@ -204,7 +194,7 @@ spec:
                 }'
 
               # Maven Hosted Releases
-              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/hosted \
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/hosted \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "releases",
@@ -224,7 +214,7 @@ spec:
                 }'
 
               # Maven Group: maven-all-public
-              curl -u admin:$NEW_PASS -X POST $MAVEN_BASE/group \
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/group \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "maven-all-public",
@@ -251,7 +241,7 @@ spec:
               ########################################
 
               # NPM Proxy: npm
-              curl -u admin:$NEW_PASS -X POST $NPM_BASE/proxy \
+              curl -u admin:$ADMIN_PASS -X POST $NPM_BASE/proxy \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "npm",
@@ -274,7 +264,7 @@ spec:
                 }'
 
               # NPM Group: npm-all
-              curl -u admin:$NEW_PASS -X POST $NPM_BASE/group \
+              curl -u admin:$ADMIN_PASS -X POST $NPM_BASE/group \
                 -H "Content-Type: application/json" \
                 -d '{
                   "name": "npm-all",
