@@ -49,11 +49,10 @@ spec:
               path: /
               port: 8081
               scheme: HTTP
-            initialDelaySeconds: 60
-            timeoutSeconds: 1
-            periodSeconds: 20
-            successThreshold: 1
-            failureThreshold: 3
+              initialDelaySeconds: 120  # Increase this
+              periodSeconds: 15
+              timeoutSeconds: 5
+              failureThreshold: 10
           livenessProbe:
             httpGet:
               path: /
@@ -80,15 +79,15 @@ spec:
             - /bin/sh
             - -c
             - |
-              echo "Waiting for Nexus to initialize and create admin.password..."
-              while [ ! -f /nexus-data/admin.password ]; do
-                sleep 5
-              done
-            
               echo "Waiting for Nexus to be ready..."
               until curl -s -o /dev/null -w "%{http_code}" http://localhost:8081/service/rest/v1/status | grep -q "200"; do
               echo "Nexus is not ready yet..."
               sleep 10
+              done
+              echo "Admin password is: $(cat /nexus-data/admin.password)"
+              echo "Waiting for Nexus to initialize and create admin.password..."
+              while [ ! -f /nexus-data/admin.password ]; do
+                sleep 5
               done
 
               echo "Nexus is up. Reading default admin password..."
