@@ -14,6 +14,13 @@ oc apply -f https://raw.githubusercontent.com/bmeklund/workshop-install/refs/hea
 
 ```
 
+3. Configure Nexus instance
+
+```
+oc apply -f https://raw.githubusercontent.com/bmeklund/workshop-install/refs/heads/main/workshop-base/post-work/nexus-init-job.yaml
+
+```
+
 # coming features
 
 ## progressive sync

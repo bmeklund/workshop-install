@@ -27,11 +27,11 @@ spec:
           repoURL: https://github.com/bmeklund/workshop-install
           targetNamespace: openshift-operators
           syncWave: "2"             # Will sync after operators-base Application is processed
-        - name: post-work
-          path: workshop-base/post-work
-          repoURL: https://github.com/bmeklund/workshop-install
-          targetNamespace: nexus
-          syncWave: "3"             # Will sync after operators-base Application is processed
+        #- name: post-work
+         # path: workshop-base/post-work
+          #repoURL: https://github.com/bmeklund/workshop-install
+          #targetNamespace: nexus
+          #syncWave: "3"             # Will sync after operators-base Application is processed
   template:
     metadata:
       name: "{{name}}" 
