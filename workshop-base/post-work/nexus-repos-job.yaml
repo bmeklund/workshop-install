@@ -1,0 +1,205 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nexus-repo-config
+  namespace: nexus
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      restartPolicy: Never
+      containers:
+        - name: nexus-config
+          image: curlimages/curl:latest
+          command:
+            - /bin/sh
+            - -c
+            - |
+              echo "Waiting for Nexus to be ready..."
+              until curl -s http://nexus:8081/service/rest/v1/status; do sleep 10; done
+              echo "Nexus is up."
+
+              ADMIN_PASS=$(cat /nexus-data/admin.password)
+              echo "Setting up repositories using REST API..."
+
+              MAVEN_BASE="http://nexus:8081/service/rest/v1/repositories/maven"
+              NPM_BASE="http://nexus:8081/service/rest/v1/repositories/npm"
+
+              ########################################
+              # Maven Repositories
+              ########################################
+
+              # Maven Central Proxy
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "maven-central",
+                  "online": true,
+                  "storage": {
+                    "blobStoreName": "default",
+                    "strictContentTypeValidation": true
+                  },
+                  "proxy": {
+                    "remoteUrl": "https://repo1.maven.org/maven2/"
+                  },
+                  "negativeCache": {
+                    "enabled": true,
+                    "timeToLive": 1440
+                  },
+                  "httpClient": {
+                    "blocked": false,
+                    "autoBlock": true
+                  },
+                  "maven": {
+                    "versionPolicy": "RELEASE",
+                    "layoutPolicy": "PERMISSIVE"
+                  }
+                }'
+
+              # RedHat GA Proxy
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "redhat-ga",
+                  "online": true,
+                  "storage": {
+                    "blobStoreName": "default",
+                    "strictContentTypeValidation": true
+                  },
+                  "proxy": {
+                    "remoteUrl": "https://maven.repository.redhat.com/ga/"
+                  },
+                  "negativeCache": {
+                    "enabled": true,
+                    "timeToLive": 1440
+                  },
+                  "httpClient": {
+                    "blocked": false,
+                    "autoBlock": true
+                  },
+                  "maven": {
+                    "versionPolicy": "RELEASE",
+                    "layoutPolicy": "PERMISSIVE"
+                  }
+                }'
+
+              # JBoss Proxy
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/proxy \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "jboss",
+                  "online": true,
+                  "storage": {
+                    "blobStoreName": "default",
+                    "strictContentTypeValidation": true
+                  },
+                  "proxy": {
+                    "remoteUrl": "https://repository.jboss.org/nexus/content/groups/public"
+                  },
+                  "negativeCache": {
+                    "enabled": true,
+                    "timeToLive": 1440
+                  },
+                  "httpClient": {
+                    "blocked": false,
+                    "autoBlock": true
+                  },
+                  "maven": {
+                    "versionPolicy": "RELEASE",
+                    "layoutPolicy": "PERMISSIVE"
+                  }
+                }'
+
+              # Maven Hosted Releases
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/hosted \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "releases",
+                  "online": true,
+                  "storage": {
+                    "blobStoreName": "default",
+                    "strictContentTypeValidation": true,
+                    "writePolicy": "ALLOW_ONCE"
+                  },
+                  "component": {
+                    "proprietaryComponents": false
+                  },
+                  "maven": {
+                    "versionPolicy": "RELEASE",
+                    "layoutPolicy": "STRICT"
+                  }
+                }'
+
+              # Maven Group: maven-all-public
+              curl -u admin:$ADMIN_PASS -X POST $MAVEN_BASE/group \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "maven-all-public",
+                  "online": true,
+                  "storage": {
+                    "blobStoreName": "default",
+                    "strictContentTypeValidation": true
+                  },
+                  "group": {
+                    "memberNames": [
+                      "maven-central",
+                      "redhat-ga",
+                      "jboss"
+                    ]
+                  },
+                  "maven": {
+                    "versionPolicy": "RELEASE",
+                    "layoutPolicy": "PERMISSIVE"
+                  }
+                }'
+
+              ########################################
+              # NPM Repositories
+              ########################################
+
+              # NPM Proxy: npm
+              curl -u admin:$ADMIN_PASS -X POST $NPM_BASE/proxy \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "npm",
+                  "online": true,
+                  "storage": {
+                    "blobStoreName": "default",
+                    "strictContentTypeValidation": true
+                  },
+                  "proxy": {
+                    "remoteUrl": "https://registry.npmjs.org"
+                  },
+                  "negativeCache": {
+                    "enabled": true,
+                    "timeToLive": 1440
+                  },
+                  "httpClient": {
+                    "blocked": false,
+                    "autoBlock": true
+                  }
+                }'
+
+              # NPM Group: npm-all
+              curl -u admin:$ADMIN_PASS -X POST $NPM_BASE/group \
+                -H "Content-Type: application/json" \
+                -d '{
+                  "name": "npm-all",
+                  "online": true,
+                  "storage": {
+                    "blobStoreName": "default",
+                    "strictContentTypeValidation": true
+                  },
+                  "group": {
+                    "memberNames": ["npm"]
+                  }
+                }'
+
+              echo "All Maven and NPM repositories created successfully!"
+          volumeMounts:
+            - name: nexus-data
+              mountPath: /nexus-data
+      volumes:
+        - name: nexus-data
+          persistentVolumeClaim:
+            claimName: nexus-pvc

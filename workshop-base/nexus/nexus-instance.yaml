@@ -1,0 +1,120 @@
+apiVersion: project.openshift.io/v1
+kind: Project
+metadata:
+  name: nexus
+---
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: nexus-pvc
+  namespace: nexus
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+---
+kind: ServiceAccount
+apiVersion: v1
+metadata:
+  name: nexus-sa
+  namespace: nexus
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: nexus
+  namespace: nexus
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: nexus
+  strategy:
+    type: Recreate
+  template:
+    metadata:
+      labels:
+        app: nexus
+    spec:
+      serviceAccountName: nexus-sa
+      automountServiceAccountToken: false
+      containers:
+        - name: nexus
+          image: docker.io/sonatype/nexus3:3.24.0
+          imagePullPolicy: Always
+          ports:
+            - containerPort: 8081
+              protocol: TCP
+            - containerPort: 5000
+              protocol: TCP
+          readinessProbe:
+            httpGet:
+              path: /
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 60
+            timeoutSeconds: 1
+            periodSeconds: 20
+            successThreshold: 1
+            failureThreshold: 3
+          livenessProbe:
+            httpGet:
+              path: /
+              port: 8081
+              scheme: HTTP
+            initialDelaySeconds: 60
+            timeoutSeconds: 1
+            periodSeconds: 10
+            successThreshold: 1
+            failureThreshold: 3
+          resources:
+            requests:
+              memory: 2Gi
+              cpu: '2'
+            limits:
+              memory: 4Gi
+              cpu: '2'
+          volumeMounts:
+            - name: nexus-data
+              mountPath: /nexus-data
+    volumes:
+      - name: nexus-data
+        persistentVolumeClaim:
+          claimName: nexus-pvc
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: nexus-registry
+  namespace: nexus
+  labels:
+    app: nexus
+spec:
+  selector:
+    app: nexus
+  ports:
+  - name: nexus-registry-tcp
+    port: 5000
+    protocol: TCP
+    targetPort: 5000
+  sessionAffinity: None
+  type: ClusterIP
+---
+apiVersion: route.openshift.io/v1
+kind: Route
+metadata:
+  annotations:
+    console.alpha.openshift.io/overview-app-route: "false"
+  name: nexus-registry
+  namespace: nexus
+  labels:
+    app: nexus
+spec:
+  to:
+    kind: Service
+    name: nexus-registry
+  tls:
+    insecureEdgeTerminationPolicy: Redirect
+    termination: edge

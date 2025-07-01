@@ -1,0 +1,50 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: nexus-init
+  namespace: nexus
+spec:
+  backoffLimit: 4
+  template:
+    spec:
+      containers:
+      - name: nexus-init
+        image: curlimages/curl:latest
+        command:
+          - /bin/sh
+          - -c
+          - |
+            echo "Waiting for Nexus to be ready..."
+            until curl -s http://nexus:8081/service/rest/v1/status; do
+              sleep 10
+            done
+
+            echo "Nexus is up. Reading default admin password..."
+            ADMIN_PASS=$(cat /nexus-data/admin.password)
+            NEW_PASS="redhat" 
+
+            echo "Setting new admin password..."
+            curl -u admin:$ADMIN_PASS \
+              -X PUT -H "Content-Type: application/json" \
+              -d "{\"data\":{\"password\":\"$NEW_PASS\"}}" \
+              http://nexus:8081/service/rest/v1/security/users/admin/change-password
+
+            echo "Enabling anonymous access..."
+            curl -u admin:$NEW_PASS \
+              -X PUT -H "Content-Type: application/json" \
+              -d '{
+                "enabled": true,
+                "userId": "anonymous",
+                "realmName": "NexusAuthorizingRealm"
+                }' \
+              http://nexus:8081/service/rest/v1/security/anonymous
+
+            echo "Done configuring Nexus."
+        volumeMounts:
+          - name: nexus-data
+            mountPath: /nexus-data
+      restartPolicy: Never
+      volumes:
+        - name: nexus-data
+          persistentVolumeClaim:
+            claimName: nexus-pvc
